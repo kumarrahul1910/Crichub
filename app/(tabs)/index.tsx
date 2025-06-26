@@ -1,61 +1,92 @@
 import { useCart } from '@/components/CartContext';
 import { ThemedText } from '@/components/ThemedText';
+import { useWishlist } from '@/components/WishlistContext';
 import { products } from '@/services/products';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function HomeScreen() {
   const { addToCart } = useCart();
+  const { category: selectedCategory = 'All' } = useLocalSearchParams<{ category?: string }>();
+  const [search, setSearch] = useState('');
+  const { addToWishlist, removeFromWishlist, isWishlisted } = useWishlist();
+
+  const filteredProducts = products.filter((product) => {
+    const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
+    const matchesSearch = product.title.toLowerCase().includes(search.toLowerCase()) || product.description.toLowerCase().includes(search.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.logo}
-        />
         <ThemedText type="title" style={styles.title}>CricHub</ThemedText>
-        <ThemedText style={styles.subtitle}>Your One-Stop Cricket Shop</ThemedText>
+        <ThemedText style={styles.subtitle}>Cricket for life</ThemedText>
       </View>
 
-      <View style={styles.categories}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {['All', 'Bats', 'Balls', 'Protection', 'Accessories'].map((category) => (
-            <TouchableOpacity key={category} style={styles.categoryButton}>
-              <ThemedText>{category}</ThemedText>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+      <View style={styles.searchBarContainer}>
+        <Ionicons name="search" size={20} color="#888" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchBar}
+          placeholder="Search products..."
+          value={search}
+          onChangeText={setSearch}
+          placeholderTextColor="#888"
+        />
       </View>
 
       <View style={styles.productsGrid}>
-        {products.map((product) => (
-          <TouchableOpacity key={product.id} style={styles.productCard}>
-            <Image
-              source={{ uri: product.image }}
-              style={styles.productImage}
-            />
-            <View style={styles.productInfo}>
-              <ThemedText type="defaultSemiBold" numberOfLines={2}>{product.title}</ThemedText>
-              <ThemedText style={styles.price}>${product.price.toFixed(2)}</ThemedText>
-              {product.rating && (
-                <View style={styles.rating}>
-                  <Ionicons name="star" size={16} color="#FFD700" />
-                  <ThemedText style={styles.ratingText}>
-                    {product.rating.rate} ({product.rating.count})
-                  </ThemedText>
-                </View>
-              )}
+        {filteredProducts.map((product) => {
+          // Debug guards for product fields (log outside JSX)
+          if (typeof product.title !== 'string') console.log('BAD TITLE', product.title);
+          if (typeof product.price !== 'number') console.log('BAD PRICE', product.price);
+          if (typeof product.description !== 'string') console.log('BAD DESC', product.description);
+          return (
+            <TouchableOpacity key={product.id} style={styles.productCard}>
+              <Image
+                source={{ uri: product.image }}
+                style={styles.productImage}
+              />
               <TouchableOpacity
-                style={styles.addButton}
-                onPress={() => addToCart(product)}
+                style={styles.wishlistButton}
+                onPress={() => {
+                  if (isWishlisted(product.id)) {
+                    removeFromWishlist(product.id);
+                  } else {
+                    addToWishlist(product);
+                  }
+                }}
               >
-                <ThemedText style={styles.addButtonText}>Add to Cart</ThemedText>
+                <Ionicons
+                  name={isWishlisted(product.id) ? 'heart' : 'heart-outline'}
+                  size={24}
+                  color={isWishlisted(product.id) ? '#FF0000' : '#888'}
+                />
               </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        ))}
+              <View style={styles.productInfo}>
+                <ThemedText type="defaultSemiBold" numberOfLines={2}>{String(product.title)}</ThemedText>
+                <ThemedText style={styles.price}>₹{Number(product.price).toFixed(2)}</ThemedText>
+                {product.rating && (
+                  <View style={styles.rating}>
+                    <Ionicons name="star" size={16} color="#FFD700" />
+                    <ThemedText style={styles.ratingText}>
+                      {String(product.rating.rate)} ({String(product.rating.count)})
+                    </ThemedText>
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={styles.addButton}
+                  onPress={() => addToCart(product)}
+                >
+                  <ThemedText style={styles.addButtonText}>Add to Cart</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </ScrollView>
   );
@@ -79,23 +110,33 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
+    marginTop: 30,
     marginBottom: 5,
   },
   subtitle: {
     fontSize: 16,
     color: '#666',
   },
-  categories: {
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  categoryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    marginHorizontal: 5,
+  searchBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f0f0f0',
     borderRadius: 20,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    height: 40,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchBar: {
+    flex: 1,
+    fontSize: 16,
+    color: '#222',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
   },
   productsGrid: {
     padding: 10,
@@ -108,14 +149,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     backgroundColor: '#fff',
     borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
   },
   productImage: {
     width: '100%',
@@ -152,5 +186,13 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: '#fff',
     fontWeight: '500',
+  },
+  wishlistButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 20,
+    padding: 6,
   },
 });

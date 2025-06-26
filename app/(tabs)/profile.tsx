@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useUser } from '../../components/UserContext';
@@ -28,6 +29,11 @@ export default function ProfileScreen() {
     setIsEditing(false);
   };
 
+  const handleLogout = () => {
+    logout();
+    router.replace('/(auth)/login');
+  };
+
   const renderField = (label: string, value: string | undefined, key: keyof typeof user) => {
     if (isEditing) {
       return (
@@ -55,11 +61,11 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Image
-          source={{ uri: user.avatar }}
+          source={{ uri: (isEditing ? editedProfile?.avatar : user.avatar) }}
           style={styles.avatar}
         />
-        <Text style={styles.name}>{user.name}</Text>
-        <Text style={styles.email}>{user.email}</Text>
+        <Text style={styles.name}>{isEditing ? editedProfile?.name : user.name}</Text>
+        <Text style={styles.email}>{isEditing ? editedProfile?.email : user.email}</Text>
       </View>
 
       <View style={styles.content}>
@@ -101,7 +107,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, styles.logoutButton]}
-              onPress={logout}
+              onPress={handleLogout}
             >
               <Ionicons name="log-out-outline" size={20} color="white" />
               <Text style={styles.buttonText}>Logout</Text>
@@ -133,6 +139,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 24,
     fontWeight: 'bold',
+    marginTop: 30,
     marginBottom: 5,
   },
   email: {

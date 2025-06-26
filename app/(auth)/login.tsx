@@ -2,10 +2,16 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { FormInput } from '../../components/FormInput';
-import { theme } from '../../constants/theme';
+import { useUser } from '../../components/UserContext';
+import { getTheme } from '../../constants/theme';
+import { useColorScheme } from '../../hooks/useColorScheme';
 import { authService } from '../../services/auth';
 
-export default function LoginScreen() {
+function LoginScreen() {
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = getTheme(colorScheme);
+  const { setUser } = useUser();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,28 +22,65 @@ export default function LoginScreen() {
       setError('Please fill in all fields');
       return;
     }
-
     setLoading(true);
     setError('');
-
     try {
-      const result = await authService.login(email, password);
-      if (result.success) {
-        router.replace('/(app)/home');
-      } else {
-        setError(result.error || 'Login failed');
-      }
-    } catch (err) {
-      setError('An error occurred');
+      await authService.login(email, password);
+      setUser({
+        id: Date.now().toString(),
+        name: email.split('@')[0],
+        email,
+        phone: '',
+        address: '',
+        avatar: 'https://via.placeholder.com/150',
+        joinDate: new Date().toISOString(),
+      });
+      router.replace('/(tabs)');
+    } catch {
+      setError('Invalid email or password');
     } finally {
       setLoading(false);
     }
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: theme.spacing.lg,
+      backgroundColor: theme.colors.background,
+      justifyContent: 'center',
+    },
+    title: {
+      ...theme.typography.h1,
+      color: theme.colors.text,
+      marginBottom: theme.spacing.xl,
+      textAlign: 'center',
+    },
+    button: {
+      backgroundColor: theme.colors.primary,
+      padding: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      alignItems: 'center',
+      marginTop: theme.spacing.md,
+    },
+    buttonText: {
+      color: theme.colors.secondary,
+      ...theme.typography.body,
+      fontWeight: 'bold',
+    },
+    linkButton: {
+      marginTop: theme.spacing.md,
+      alignItems: 'center',
+    },
+    linkText: {
+      color: theme.colors.primary,
+      ...theme.typography.body,
+    },
+  });
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Shop Hub</Text>
-      
+      <Text style={styles.title}>Login</Text>
       <FormInput
         label="Email"
         value={email}
@@ -47,7 +90,6 @@ export default function LoginScreen() {
         autoCapitalize="none"
         error={error}
       />
-
       <FormInput
         label="Password"
         value={password}
@@ -56,7 +98,6 @@ export default function LoginScreen() {
         secureTextEntry
         error={error}
       />
-
       <TouchableOpacity
         style={styles.button}
         onPress={handleLogin}
@@ -68,48 +109,14 @@ export default function LoginScreen() {
           <Text style={styles.buttonText}>Login</Text>
         )}
       </TouchableOpacity>
-
       <TouchableOpacity
         style={styles.linkButton}
         onPress={() => router.push('/(auth)/signup')}
       >
-        <Text style={styles.linkText}>Don't have an account? Sign up</Text>
+        <Text style={styles.linkText}>Don&apos;t have an account? Sign up</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: theme.spacing.lg,
-    backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-  },
-  title: {
-    ...theme.typography.h1,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.xl,
-    textAlign: 'center',
-  },
-  button: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    alignItems: 'center',
-    marginTop: theme.spacing.md,
-  },
-  buttonText: {
-    color: theme.colors.secondary,
-    ...theme.typography.body,
-    fontWeight: '700' as const,
-  },
-  linkButton: {
-    marginTop: theme.spacing.md,
-    alignItems: 'center',
-  },
-  linkText: {
-    color: theme.colors.primary,
-    ...theme.typography.body,
-  },
-}); 
+export default LoginScreen; 

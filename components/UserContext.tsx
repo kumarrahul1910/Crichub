@@ -14,6 +14,7 @@ interface UserContextType {
   user: UserProfile | null;
   updateProfile: (profile: Partial<UserProfile>) => void;
   logout: () => void;
+  setUser: (user: UserProfile) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -46,6 +47,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user,
         updateProfile,
         logout,
+        setUser,
       }}
     >
       {children}
